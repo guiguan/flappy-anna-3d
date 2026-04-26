@@ -205,32 +205,52 @@ playerGroup.add(wingR);
 
 // Hair — sphere chains like beaded strings
 const hairMat = toonMat(0x8B6914);
+const HAIR_SPACING = 0.1;
+const BEAD_R = 0.06;
 
-// Two ponytails — 30° outward, curved beads, swing on X for up/down physics
-const ponytails: THREE.Group[] = [];
+// Push bead outside head/body (playerGroup local space)
+function clampHair(p: THREE.Vector3, side: number): void {
+  const HEAD_Y = 0.7, HEAD_R = 0.28 + BEAD_R;
+  const BODY_R = 0.35 + BEAD_R, BODY_CAP = 0.6;
+
+  // Head
+  const hdx = p.x, hdy = p.y - HEAD_Y, hdz = p.z;
+  const hd = Math.sqrt(hdx * hdx + hdy * hdy + hdz * hdz);
+  if (hd < HEAD_R) { const s = HEAD_R / Math.max(hd, 0.0001); p.x = hdx * s; p.y = HEAD_Y + hdy * s; p.z = hdz * s; }
+
+  // Body cylinder
+  const cxz = Math.sqrt(p.x * p.x + p.z * p.z);
+  if (Math.abs(p.y) <= BODY_CAP && cxz < BODY_R) { const s = BODY_R / Math.max(cxz, 0.0001); p.x *= s; p.z *= s; }
+
+  // Body caps
+  for (const cy of [BODY_CAP, -BODY_CAP]) {
+    const cdx = p.x, cdy = p.y - cy, cdz = p.z;
+    const cd = Math.sqrt(cdx * cdx + cdy * cdy + cdz * cdz);
+    if (cd < BODY_R) { const s = BODY_R / Math.max(cd, 0.0001); p.x = cdx * s; p.y = cy + cdy * s; p.z = cdz * s; }
+  }
+
+  // Bias outward from head
+  if (side * p.x < 0.1) p.x = side * 0.1;
+}
+
+const ponytails: { tie: THREE.Mesh; beads: THREE.Mesh[]; side: number }[] = [];
+const _htmp = new THREE.Vector3();
 
 for (const side of [-1, 1]) {
-  const g = new THREE.Group();
-  g.position.set(side * 0.15, 0.95, -0.05);
-  g.rotation.z = side * 0.52; // 30° outward
-  g.userData.restZ = side * 0.52;
-
-  const tie = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 5), hairMat);
+  const tie = new THREE.Mesh(new THREE.SphereGeometry(BEAD_R, 5, 4), hairMat);
+  tie.position.set(side * 0.32, 0.6, -0.08);
   tie.castShadow = true;
-  g.add(tie);
+  playerGroup.add(tie);
 
-  // Curved bead chain — always stays outside head
-  for (let b = 0; b < 12; b++) {
-    const t = b / 11;
-    const bead = new THREE.Mesh(new THREE.SphereGeometry(0.05, 5, 4), hairMat);
-    bead.castShadow = true;
-    // Beads arc outward from the tie, then curve down
-    const outward = 0.15 + t * 0.35; // progressive outward offset
-    bead.position.set(side * outward, -t * 1.3, -t * 0.1);
-    g.add(bead);
+  const beads: THREE.Mesh[] = [];
+  for (let b = 0; b < 10; b++) {
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(BEAD_R, 5, 4), hairMat);
+    mesh.castShadow = true;
+    mesh.position.set(side * 0.32, 0.6 - (b + 1) * HAIR_SPACING, -0.08);
+    playerGroup.add(mesh);
+    beads.push(mesh);
   }
-  ponytails.push(g);
-  playerGroup.add(g);
+  ponytails.push({ tie, beads, side });
 }
 
 playerGroup.position.set(0, 5, 0);
@@ -362,16 +382,34 @@ function animate(time: number) {
   wingL.rotation.z = wingFlap;
   wingR.rotation.z = -wingFlap;
 
-  // Ponytail physics: Z stays 30° outward; X swings up/down with velocity
+  // Ponytail chain physics — sway in Z, bounce in Y, spread in X
   const vy = state.playerVelocityY;
-  const breeze = Math.sin(time * 0.004) * 0.05;
+  const offY = vy * 0.08 + Math.sin(time * 0.008) * 0.04;
+  const offZ = -vy * 0.05 + Math.cos(time * 0.007) * 0.03;
+
   for (const pt of ponytails) {
-    // Z: maintain 30° outward tilt
-    const restZ = pt.userData.restZ as number;
-    pt.rotation.z += (restZ - pt.rotation.z) * 0.15;
-    // X: jump up → ponytail trails DOWN (+X rot), fall → ponytail lifts UP (-X rot)
-    const xTarget = vy * 0.1 + breeze;
-    pt.rotation.x += (xTarget - pt.rotation.x) * 0.12;
+    const b0 = pt.beads[0];
+    b0.position.set(pt.tie.position.x, pt.tie.position.y - HAIR_SPACING, pt.tie.position.z);
+
+    for (let b = 1; b < pt.beads.length; b++) {
+      const bead = pt.beads[b];
+      const prev = pt.beads[b - 1];
+      const t = b / (pt.beads.length - 1);
+      // Spread: tips fan outward with velocity
+      const spreadX = pt.side * Math.abs(vy) * 0.04 * t;
+      _htmp.set(
+        prev.position.x + spreadX,
+        prev.position.y - HAIR_SPACING + offY * t * t * 2,
+        prev.position.z + offZ * t * t * 2,
+      );
+      clampHair(_htmp, pt.side);
+      bead.position.lerp(_htmp, 0.4 + t * 0.3);
+      const dx = bead.position.x - prev.position.x;
+      const dy = bead.position.y - prev.position.y;
+      const dz = bead.position.z - prev.position.z;
+      const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (d > 0.001) { bead.position.set(prev.position.x + dx * HAIR_SPACING / d, prev.position.y + dy * HAIR_SPACING / d, prev.position.z + dz * HAIR_SPACING / d); }
+    }
   }
 
   // Sky moves with camera so it's always centered
