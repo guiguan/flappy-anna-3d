@@ -203,6 +203,29 @@ wingR.position.set(0.4, 0.2, 0);
 wingR.castShadow = true;
 playerGroup.add(wingR);
 
+// Baseball cap
+const capGroup = new THREE.Group();
+capGroup.position.set(0, 0.95, 0.05);
+capGroup.userData.restRot = new THREE.Vector3(-0.15, 0, 0); // slight forward tilt
+
+const capDome = new THREE.Mesh(
+  new THREE.SphereGeometry(0.32, 12, 8),
+  toonMat(0xffffff),
+);
+capDome.scale.set(1.1, 0.65, 1.0);
+capDome.castShadow = true;
+capGroup.add(capDome);
+
+const capBrim = new THREE.Mesh(
+  new THREE.BoxGeometry(0.65, 0.05, 0.28),
+  toonMat(0xe8e8e8),
+);
+capBrim.position.set(0, -0.1, 0.2);
+capBrim.castShadow = true;
+capGroup.add(capBrim);
+
+playerGroup.add(capGroup);
+
 // Hair — sphere chains like beaded strings
 const hairMat = toonMat(0x8B6914);
 const HAIR_SPACING = 0.1;
@@ -382,8 +405,11 @@ function animate(time: number) {
   wingL.rotation.z = wingFlap;
   wingR.rotation.z = -wingFlap;
 
-  // Ponytail chain physics — sway in Z, bounce in Y, spread in X
+  // Cap follows head tilt
   const vy = state.playerVelocityY;
+  capGroup.rotation.x += (-0.15 + vy * 0.04 - capGroup.rotation.x) * 0.1;
+
+  // Ponytail chain physics — sway in Z, bounce in Y, spread in X
   const offY = -vy * 0.08 + Math.sin(time * 0.008) * 0.04;
   const offZ = vy * 0.05 + Math.cos(time * 0.007) * 0.03;
 
