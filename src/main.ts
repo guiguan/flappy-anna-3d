@@ -384,8 +384,8 @@ function animate(time: number) {
 
   // Ponytail chain physics — sway in Z, bounce in Y, spread in X
   const vy = state.playerVelocityY;
-  const offY = vy * 0.08 + Math.sin(time * 0.008) * 0.04;
-  const offZ = -vy * 0.05 + Math.cos(time * 0.007) * 0.03;
+  const offY = -vy * 0.08 + Math.sin(time * 0.008) * 0.04;
+  const offZ = vy * 0.05 + Math.cos(time * 0.007) * 0.03;
 
   for (const pt of ponytails) {
     const b0 = pt.beads[0];
