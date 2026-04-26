@@ -203,6 +203,36 @@ wingR.position.set(0.4, 0.2, 0);
 wingR.castShadow = true;
 playerGroup.add(wingR);
 
+// Hair — sphere chains like beaded strings
+const hairMat = toonMat(0x8B6914);
+
+// Two ponytails — 30° outward, curved beads, swing on X for up/down physics
+const ponytails: THREE.Group[] = [];
+
+for (const side of [-1, 1]) {
+  const g = new THREE.Group();
+  g.position.set(side * 0.15, 0.95, -0.05);
+  g.rotation.z = side * 0.52; // 30° outward
+  g.userData.restZ = side * 0.52;
+
+  const tie = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 5), hairMat);
+  tie.castShadow = true;
+  g.add(tie);
+
+  // Curved bead chain — always stays outside head
+  for (let b = 0; b < 12; b++) {
+    const t = b / 11;
+    const bead = new THREE.Mesh(new THREE.SphereGeometry(0.05, 5, 4), hairMat);
+    bead.castShadow = true;
+    // Beads arc outward from the tie, then curve down
+    const outward = 0.15 + t * 0.35; // progressive outward offset
+    bead.position.set(side * outward, -t * 1.3, -t * 0.1);
+    g.add(bead);
+  }
+  ponytails.push(g);
+  playerGroup.add(g);
+}
+
 playerGroup.position.set(0, 5, 0);
 scene.add(playerGroup);
 
@@ -331,6 +361,18 @@ function animate(time: number) {
     : Math.sin(time * 0.015) * 0.2;
   wingL.rotation.z = wingFlap;
   wingR.rotation.z = -wingFlap;
+
+  // Ponytail physics: Z stays 30° outward; X swings up/down with velocity
+  const vy = state.playerVelocityY;
+  const breeze = Math.sin(time * 0.004) * 0.05;
+  for (const pt of ponytails) {
+    // Z: maintain 30° outward tilt
+    const restZ = pt.userData.restZ as number;
+    pt.rotation.z += (restZ - pt.rotation.z) * 0.15;
+    // X: jump up → ponytail trails DOWN (+X rot), fall → ponytail lifts UP (-X rot)
+    const xTarget = vy * 0.1 + breeze;
+    pt.rotation.x += (xTarget - pt.rotation.x) * 0.12;
+  }
 
   // Sky moves with camera so it's always centered
   sky.position.x = state.worldOffset;
