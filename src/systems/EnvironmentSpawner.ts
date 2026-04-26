@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createTree, createMountain, createBush } from '../utils/ProceduralGeo';
+import { createTree, createMountain, createBush, seededRandom } from '../utils/ProceduralGeo';
 import { getTerrainHeight } from '../utils/ProceduralGeo';
 
 interface EnvObject {
@@ -30,11 +30,6 @@ export class EnvironmentSpawner {
 
   private generateChunk(startX: number) {
     const seed = startX * 137;
-
-    function seededRandom(s: number): number {
-      const x = Math.sin(s * 12.9898 + 78.233) * 43758.5453;
-      return x - Math.floor(x);
-    }
 
     let s = seed;
 

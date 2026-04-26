@@ -4,7 +4,7 @@ import type { InputManager } from './InputManager';
 import {
   GRAVITY, JUMP_VELOCITY, MAX_FALL_SPEED, SCROLL_SPEED,
   OBSTACLE_START_DISTANCE, OBSTACLE_INTERVAL,
-  CEILING_Y, GROUND_Y, DEATH_DELAY_FRAMES,
+  CEILING_Y, GROUND_Y, DEATH_DELAY_FRAMES, DEATH_KNOCKBACK_VELOCITY,
 } from './constants';
 
 export function createInitialState(): GameState {
@@ -16,7 +16,6 @@ export function createInitialState(): GameState {
     playerVelocityY: 0,
     playerRotation: 0,
     gameoverTimer: 0,
-    lastObstacleX: OBSTACLE_START_DISTANCE,
   };
 }
 
@@ -89,7 +88,6 @@ function startGame(): GameState {
     playerVelocityY: 0,
     playerRotation: 0,
     gameoverTimer: 0,
-    lastObstacleX: OBSTACLE_START_DISTANCE,
   };
 }
 
@@ -97,7 +95,7 @@ function startGameOver(prev: GameState): GameState {
   return {
     ...prev,
     mode: Mode.GameOver,
-    playerVelocityY: -1.5,
+    playerVelocityY: DEATH_KNOCKBACK_VELOCITY,
     gameoverTimer: 0,
   };
 }

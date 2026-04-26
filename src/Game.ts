@@ -13,5 +13,4 @@ export interface GameState {
   playerVelocityY: number;
   playerRotation: number;
   gameoverTimer: number;
-  lastObstacleX: number;
 }

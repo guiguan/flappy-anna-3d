@@ -1,11 +1,12 @@
 import * as THREE from 'three';
+import { FOG_DENSITY } from '../constants';
 
 export function createWaterMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
       uFogColor: { value: new THREE.Color(0x9ec8d8) },
-      uFogDensity: { value: 0.0005 },
+      uFogDensity: { value: FOG_DENSITY },
     },
     vertexShader: `
       uniform float uTime;

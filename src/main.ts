@@ -12,7 +12,7 @@ import { EnvironmentSpawner } from './systems/EnvironmentSpawner';
 import { TerrainSpawner } from './systems/TerrainSpawner';
 import {
   OBSTACLE_START_DISTANCE, OBSTACLE_INTERVAL,
-  GROUND_Y, CEILING_Y,
+  GROUND_Y, CEILING_Y, FOG_DENSITY, DEATH_KNOCKBACK_VELOCITY,
 } from './constants';
 
 // ─── DOM Elements ────────────────────────────────────────────────
@@ -34,7 +34,7 @@ document.body.prepend(renderer.domElement);
 // ─── Scene ───────────────────────────────────────────────────────
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x7ec8e3);
-scene.fog = new THREE.FogExp2(0xffcc88, 0.0005);
+scene.fog = new THREE.FogExp2(0xffcc88, FOG_DENSITY);
 
 // ─── Camera ──────────────────────────────────────────────────────
 const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.5, 200);
@@ -144,6 +144,7 @@ for (let i = 0; i < 10; i++) {
     -6 - Math.random() * 5,
   );
   cg.scale.setScalar(0.7 + Math.random() * 1.8);
+  cg.userData.initialX = cg.position.x;
   clouds.push(cg);
   scene.add(cg);
 }
@@ -154,7 +155,7 @@ const terrainSpawner = new TerrainSpawner(scene, toonMat(0x7ec850));
 // Ocean water (far background, fills the horizon — large enough that edges are beyond fog)
 const waterGeo = new THREE.PlaneGeometry(600, 200, 120, 40);
 waterGeo.rotateX(-Math.PI / 2);
-const waterMat = createWaterMaterial();
+const waterMat: THREE.ShaderMaterial = createWaterMaterial();
 const water = new THREE.Mesh(waterGeo, waterMat);
 water.position.set(0, -2.0, -25);
 water.renderOrder = 1;
@@ -175,7 +176,6 @@ playerHead.position.y = 0.7;
 playerHead.castShadow = true;
 playerGroup.add(playerHead);
 
-// Eyes
 const eyeGeo = new THREE.SphereGeometry(0.08, 6, 4);
 const eyeWhiteMat = new THREE.MeshToonMaterial({ color: 0xffffff, gradientMap: toonGradient });
 const eyePupilMat = new THREE.MeshToonMaterial({ color: 0x222222, gradientMap: toonGradient });
@@ -192,7 +192,6 @@ const rightPupil = new THREE.Mesh(new THREE.SphereGeometry(0.04, 4, 3), eyePupil
 rightPupil.position.set(0.1, 0.78, 0.3);
 playerGroup.add(rightPupil);
 
-// Wings
 const wingGeo = new THREE.BoxGeometry(0.55, 0.06, 0.18);
 const wingMat = toonMat(0xfff8dc);
 const wingL = new THREE.Mesh(wingGeo, wingMat);
@@ -217,15 +216,9 @@ const envSpawner = new EnvironmentSpawner(scene, toonMat);
 // ─── Game State ──────────────────────────────────────────────────
 const input = new InputManager();
 let state = createInitialState();
-let lastScore = 0;
-let gameStarted = false;
-
 // ─── Audio Init on First Interaction ─────────────────────────────
 async function initAudio() {
-  if (gameStarted) return;
-  gameStarted = true;
   await audio.init();
-  // Load sounds if available
   audio.load('jump', '/assets/audio/jump.ogg');
   audio.load('hit', '/assets/audio/hit.ogg');
   audio.load('score', '/assets/audio/score.ogg');
@@ -257,7 +250,6 @@ function animate(time: number) {
     obstacleSpawner.reset();
     envSpawner.reset();
     terrainSpawner.reset();
-    lastScore = 0;
   }
   envSpawner.update(state.worldOffset);
   terrainSpawner.update(state.worldOffset);
@@ -277,7 +269,7 @@ function animate(time: number) {
       state = {
         ...state,
         mode: Mode.GameOver,
-        playerVelocityY: -1.5,
+        playerVelocityY: DEATH_KNOCKBACK_VELOCITY,
         gameoverTimer: 0,
       };
     }
@@ -291,7 +283,7 @@ function animate(time: number) {
     if (input.jumpStarted) {
       audio.playJump();
     }
-    if (state.score > lastScore) {
+    if (state.score > prevState.score) {
       audio.playScore();
       particleSystem.emitBurst(
         new THREE.Vector3(state.worldOffset + 10, state.playerY, 0),
@@ -306,14 +298,9 @@ function animate(time: number) {
       20, 0xff4444, 1.2, 3.0, 0.08,
     );
   }
-  lastScore = state.score;
-
   // Cloud parallax (very slow, sky layer)
   for (let i = 0; i < clouds.length; i++) {
     const cloud = clouds[i];
-    if (cloud.userData.initialX === undefined) {
-      cloud.userData.initialX = cloud.position.x;
-    }
     const nativeX = cloud.userData.initialX;
     cloud.position.x = nativeX + state.worldOffset * 0.02;
     // Wrap when far behind
@@ -322,10 +309,8 @@ function animate(time: number) {
     }
   }
 
-  // Particles
   particleSystem.update(dt);
 
-  // Fireflies
   fireflyTimer += dt;
   if (fireflyTimer > 0.5) {
     fireflyTimer = 0;
@@ -337,7 +322,6 @@ function animate(time: number) {
 
   // ── Update Scene Objects ──────────────────────────────────────
 
-  // Player
   playerGroup.position.set(state.worldOffset, state.playerY, 0);
   playerGroup.rotation.z = state.playerRotation;
 
@@ -353,7 +337,7 @@ function animate(time: number) {
 
   // Water follows camera and animates
   water.position.x = state.worldOffset;
-  (waterMat as THREE.ShaderMaterial).uniforms.uTime.value = time * 0.001;
+  waterMat.uniforms.uTime.value = time * 0.001;
 
   // Shadow camera follows player — must update sun.position since Three.js
   // derives the shadow camera position from the light's world position each frame
@@ -363,7 +347,6 @@ function animate(time: number) {
   // Sun disc visible in sky (distant, follows camera at fixed offset)
   sunMesh.position.x = state.worldOffset + 35;
 
-  // Camera
   const targetCamX = state.worldOffset + 15;
   const targetCamY = state.playerY + 5;
   camera.position.lerp(

@@ -54,6 +54,11 @@ export function createBush(scale = 1.0): THREE.Group {
   return group;
 }
 
+export function seededRandom(s: number): number {
+  const x = Math.sin(s * 12.9898 + 78.233) * 43758.5453;
+  return x - Math.floor(x);
+}
+
 // ── Procedural Ground Terrain ────────────────────────────────────
 
 interface TerrainParams {
@@ -74,9 +79,7 @@ function hashSeed(seed: number): TerrainParams {
 
   let s = seed * 137;
   function hash(): number {
-    s += 1;
-    const x = Math.sin(s * 12.9898 + 78.233) * 43758.5453;
-    return x - Math.floor(x);
+    return seededRandom(s += 1);
   }
 
   const params: TerrainParams = {
