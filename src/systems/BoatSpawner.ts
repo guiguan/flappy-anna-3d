@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createBoat } from '../utils/ProceduralGeo';
+import { createBoat, smoothstep } from '../utils/ProceduralGeo';
 
 const CHUNK_SIZE = 50;
 const VIEW_AHEAD = 120;
@@ -17,11 +17,6 @@ interface Boat {
   targetX: number;
   targetZ: number;
   targetTimer: number;
-}
-
-function smoothstep(edge0: number, edge1: number, x: number): number {
-  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
-  return t * t * (3 - 2 * t);
 }
 
 export class BoatSpawner {
@@ -51,13 +46,9 @@ export class BoatSpawner {
       this.chunkIndex++;
     }
 
-    // Only update nearest few boats for performance
     const cameraX = worldOffset;
-    const activeObjects = this.objects.filter(o =>
-      Math.abs(o.nativeX - cameraX) < VIEW_AHEAD + 50
-    );
-
-    for (const obj of activeObjects) {
+    for (const obj of this.objects) {
+      if (Math.abs(obj.nativeX - cameraX) >= VIEW_AHEAD + 50) continue;
       const tdx = obj.targetX - obj.nativeX;
       const tdz = obj.targetZ - obj.z;
       const tdist = Math.sqrt(tdx * tdx + tdz * tdz);

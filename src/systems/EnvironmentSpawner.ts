@@ -9,7 +9,7 @@ export interface EnvObject {
   yBase: number;
   nearColor?: THREE.Color;
   farColor?: THREE.Color;
-  childOrigColors?: number[];
+  childData?: Array<{ mesh: THREE.Mesh; origColor: number }>;
 }
 
 const CHUNK_SIZE = 30;
@@ -18,6 +18,7 @@ const VIEW_BEHIND = 160;
 
 const MOUNTAIN_COLORS_NEAR = [0x1a4a1a, 0x2d5a2d, 0x3d6e2e, 0x4e7a3a, 0x5a7e3e, 0x6e8e3a, 0x7e9e3e];
 const MOUNTAIN_COLORS_FAR = [0x9ec8a8, 0x8eb898, 0xaed8b8, 0x7ea888];
+const MISTY_COLOR = new THREE.Color(0xd0d8e0);
 
 
 export class EnvironmentSpawner {
@@ -77,11 +78,11 @@ export class EnvironmentSpawner {
       tree.position.set(0, treeTerrainY, tz);
       tree.rotation.y = seededRandom(s++) * Math.PI * 2;
       this.scene.add(tree);
-      const treeColors: number[] = [];
+      const treeChildren: Array<{ mesh: THREE.Mesh; origColor: number }> = [];
       tree.traverse((c) => {
-        if (c instanceof THREE.Mesh) treeColors.push((c.material as THREE.MeshToonMaterial).color.getHex());
+        if (c instanceof THREE.Mesh) treeChildren.push({ mesh: c, origColor: (c.material as THREE.MeshToonMaterial).color.getHex() });
       });
-      this.objects.push({ mesh: tree, nativeX: tx, z: tz, yBase: 0, childOrigColors: treeColors });
+      this.objects.push({ mesh: tree, nativeX: tx, z: tz, yBase: 0, childData: treeChildren });
     }
 
     // Bushes — both sides
@@ -98,11 +99,11 @@ export class EnvironmentSpawner {
       const bushTerrainY = -0.5 + getTerrainHeight(bx, bz);
       bush.position.set(0, bushTerrainY, bz);
       this.scene.add(bush);
-      const bushColors: number[] = [];
+      const bushChildren: Array<{ mesh: THREE.Mesh; origColor: number }> = [];
       bush.traverse((c) => {
-        if (c instanceof THREE.Mesh) bushColors.push((c.material as THREE.MeshToonMaterial).color.getHex());
+        if (c instanceof THREE.Mesh) bushChildren.push({ mesh: c, origColor: (c.material as THREE.MeshToonMaterial).color.getHex() });
       });
-      this.objects.push({ mesh: bush, nativeX: bx, z: bz, yBase: -0.1, childOrigColors: bushColors });
+      this.objects.push({ mesh: bush, nativeX: bx, z: bz, yBase: -0.1, childData: bushChildren });
     }
 
     // Grass tufts — spread widely across grassland (positive Z)
@@ -141,17 +142,12 @@ export class EnvironmentSpawner {
         // Mountains (single mesh)
         const color = obj.nearColor.clone().lerp(obj.farColor, depthT);
         ((obj.mesh as THREE.Mesh).material as THREE.MeshToonMaterial).color.set(color);
-      } else if (obj.childOrigColors) {
-        // Trees/bushes (groups) — fade each child from its original color
-        const misty = new THREE.Color(0xd0d8e0);
-        let ci = 0;
-        obj.mesh.traverse((c) => {
-          if (c instanceof THREE.Mesh && ci < obj.childOrigColors!.length) {
-            const orig = new THREE.Color(obj.childOrigColors![ci++]);
-            const far = orig.clone().lerp(misty, 0.55);
-            (c.material as THREE.MeshToonMaterial).color.copy(orig.clone().lerp(far, depthT));
-          }
-        });
+      } else if (obj.childData) {
+        for (const cd of obj.childData) {
+          const orig = new THREE.Color(cd.origColor);
+          const far = orig.clone().lerp(MISTY_COLOR, 0.55);
+          (cd.mesh.material as THREE.MeshToonMaterial).color.copy(orig.clone().lerp(far, depthT));
+        }
       }
     }
 
