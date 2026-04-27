@@ -10,6 +10,9 @@ import { createToonGradientMap } from './rendering/ToonMaterial';
 import { createWaterMaterial } from './rendering/WaterMaterial';
 import { EnvironmentSpawner } from './systems/EnvironmentSpawner';
 import { TerrainSpawner } from './systems/TerrainSpawner';
+import { AnimalSpawner } from './systems/AnimalSpawner';
+import { BoatSpawner } from './systems/BoatSpawner';
+
 import {
   OBSTACLE_START_DISTANCE, OBSTACLE_INTERVAL,
   GROUND_Y, CEILING_Y, FOG_DENSITY, DEATH_KNOCKBACK_VELOCITY,
@@ -139,7 +142,7 @@ for (let i = 0; i < 10; i++) {
     cg.add(s);
   }
   cg.position.set(
-    Math.random() * 50 - 10,
+    Math.random() * 200 - 20,
     10 + Math.random() * 6,
     -6 - Math.random() * 5,
   );
@@ -229,33 +232,38 @@ playerGroup.add(capGroup);
 // Sunglasses — coffee brown
 const lensMat = new THREE.MeshToonMaterial({ color: 0x080200, gradientMap: toonGradient });
 const frameMat = toonMat(0x7a5540);
-const lensGeo = new THREE.BoxGeometry(0.18, 0.12, 0.04);
-const frameGeo = new THREE.BoxGeometry(0.19, 0.13, 0.045);
+const lensGeo = new THREE.BoxGeometry(0.16, 0.12, 0.04);
+const frameGeo = new THREE.BoxGeometry(0.17, 0.13, 0.045);
 
 function addLens(x: number, rz: number) {
   const frame = new THREE.Mesh(frameGeo, frameMat);
-  frame.position.set(x, 0.78, 0.34);
+  frame.position.set(x, 0.78, 0.28);
   frame.rotation.z = rz;
   playerGroup.add(frame);
   const lens = new THREE.Mesh(lensGeo, lensMat);
-  lens.position.set(x, 0.78, 0.35);
+  lens.position.set(x, 0.78, 0.29);
   lens.rotation.z = rz;
   playerGroup.add(lens);
 }
-addLens(-0.24, 0.12);
-addLens(0.24, -0.12);
+addLens(-0.17, 0.10);
+addLens(0.17, -0.10);
 
-// Curved bridge — small arch
+// Horizontal bridge bar between lenses
+const bridgeBar = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.012, 0.03), frameMat);
+bridgeBar.position.set(0, 0.78, 0.29);
+playerGroup.add(bridgeBar);
+
+// Curved arch bridge (decorative above)
 for (let i = 0; i < 3; i++) {
-  const seg = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.008, 0.008), frameMat);
-  seg.position.set((i - 1) * 0.035, 0.88 + Math.abs(i - 1) * 0.01, 0.35);
+  const seg = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.006, 0.006), frameMat);
+  seg.position.set((i - 1) * 0.03, 0.82 + Math.abs(i - 1) * 0.008, 0.29);
   playerGroup.add(seg);
 }
 
 // Temple arms
 for (const side of [-1, 1]) {
   const arm = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 0.2), frameMat);
-  arm.position.set(side * 0.3, 0.79, 0.28);
+  arm.position.set(side * 0.28, 0.79, 0.23);
   playerGroup.add(arm);
 }
 
@@ -308,12 +316,18 @@ const collisionSystem = new CollisionSystem();
 const particleSystem = new ParticleSystem(scene, 80);
 const audio = new AudioManager();
 const envSpawner = new EnvironmentSpawner(scene, toonMat);
+const animalSpawner = new AnimalSpawner(scene);
+const boatSpawner = new BoatSpawner(scene);
+
 
 // ─── Game State ──────────────────────────────────────────────────
 const input = new InputManager();
 let state = createInitialState();
 // ─── Audio Init on First Interaction ─────────────────────────────
+let audioInitStarted = false;
 async function initAudio() {
+  if (audioInitStarted) return;
+  audioInitStarted = true;
   await audio.init();
   audio.load('jump', '/assets/audio/jump.ogg');
   audio.load('hit', '/assets/audio/hit.ogg');
@@ -346,9 +360,15 @@ function animate(time: number) {
     obstacleSpawner.reset();
     envSpawner.reset();
     terrainSpawner.reset();
+    animalSpawner.reset();
+    boatSpawner.reset();
+
   }
   envSpawner.update(state.worldOffset);
   terrainSpawner.update(state.worldOffset);
+  animalSpawner.update(state.worldOffset, dt);
+  boatSpawner.update(state.worldOffset, dt, time);
+
 
   // ── Obstacle Collision Check ──────────────────────────────────
   if (state.mode === Mode.Game) {
@@ -400,9 +420,35 @@ function animate(time: number) {
     const nativeX = cloud.userData.initialX;
     cloud.position.x = nativeX + state.worldOffset * 0.02;
     // Wrap when far behind
-    if (cloud.position.x < state.worldOffset - 60) {
-      cloud.userData.initialX += 100 + Math.random() * 30;
+    if (cloud.position.x < state.worldOffset - 200) {
+      cloud.userData.initialX += 250 + Math.random() * 80;
     }
+  }
+
+  // Animal walk animation
+  for (const obj of animalSpawner.getObjects()) {
+    const speed = Math.sqrt(obj.vx * obj.vx + obj.vz * obj.vz);
+    const moving = speed > 0.1;
+    obj.mesh.position.y += Math.sin(time * 0.003 + obj.offset) * 0.015;
+    obj.mesh.rotation.z = Math.sin(time * 0.003 + obj.offset) * 0.08;
+    obj.mesh.rotation.y = Math.atan2(obj.vx, obj.vz);
+    // Leg swing (FL+BR opposite to FR+BL)
+    const legs = obj.mesh.userData.legs as THREE.Object3D[] | undefined;
+    if (legs && moving) {
+      const swing = Math.sin(time * 0.008 + obj.offset) * 0.45;
+      legs[0].rotation.x = swing;   // FL
+      legs[1].rotation.x = -swing;  // FR
+      legs[2].rotation.x = -swing;  // BL
+      legs[3].rotation.x = swing;   // BR
+    } else if (legs) {
+      for (const leg of legs) leg.rotation.x *= 0.9;
+    }
+  }
+  // Boat rock animation (wave following handled by spawner)
+  for (const obj of boatSpawner.getObjects()) {
+    obj.mesh.rotation.z = Math.sin(time * 0.002 + obj.offset) * 0.08;
+    obj.mesh.rotation.x = Math.cos(time * 0.0025 + obj.offset) * 0.05;
+    obj.mesh.rotation.y = Math.atan2(obj.vx, obj.vz);
   }
 
   particleSystem.update(dt);

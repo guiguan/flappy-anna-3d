@@ -17,7 +17,7 @@ export class AudioManager {
       const audioBuffer = await this.context!.decodeAudioData(arrayBuffer);
       this.buffers.set(name, audioBuffer);
     } catch {
-      console.warn(`Failed to load sound: ${name} from ${url}`);
+      // Audio files not found — playTone fallback will be used instead
     }
   }
 

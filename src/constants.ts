@@ -13,7 +13,7 @@ export const CEILING_Y = 15.0;
 export const GROUND_Y = 0.5;
 
 // Rendering
-export const FOG_DENSITY = 0.0005;
+export const FOG_DENSITY = 0.0008;
 
 // Game
 export const DEATH_DELAY_FRAMES = 30;
