@@ -4,6 +4,8 @@ A 3D Flappy Bird side-scroller with a Zelda-inspired anime aesthetic. Entirely b
 
 This is a 3D upgrade of a [2D Flappy Bird game](https://github.com/guiguan/flappy-anna) built 8 years ago.
 
+![Screenshot 0](./docs/screenshot_0.png)
+
 ## Play
 
 ```bash
