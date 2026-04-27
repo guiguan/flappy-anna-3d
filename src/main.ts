@@ -226,33 +226,57 @@ capGroup.add(capBrim);
 
 playerGroup.add(capGroup);
 
+// Sunglasses — coffee brown
+const lensMat = new THREE.MeshToonMaterial({ color: 0x080200, gradientMap: toonGradient });
+const frameMat = toonMat(0x7a5540);
+const lensGeo = new THREE.BoxGeometry(0.18, 0.12, 0.04);
+const frameGeo = new THREE.BoxGeometry(0.19, 0.13, 0.045);
+
+function addLens(x: number, rz: number) {
+  const frame = new THREE.Mesh(frameGeo, frameMat);
+  frame.position.set(x, 0.78, 0.34);
+  frame.rotation.z = rz;
+  playerGroup.add(frame);
+  const lens = new THREE.Mesh(lensGeo, lensMat);
+  lens.position.set(x, 0.78, 0.35);
+  lens.rotation.z = rz;
+  playerGroup.add(lens);
+}
+addLens(-0.24, 0.12);
+addLens(0.24, -0.12);
+
+// Curved bridge — small arch
+for (let i = 0; i < 3; i++) {
+  const seg = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.008, 0.008), frameMat);
+  seg.position.set((i - 1) * 0.035, 0.88 + Math.abs(i - 1) * 0.01, 0.35);
+  playerGroup.add(seg);
+}
+
+// Temple arms
+for (const side of [-1, 1]) {
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 0.2), frameMat);
+  arm.position.set(side * 0.3, 0.79, 0.28);
+  playerGroup.add(arm);
+}
+
 // Hair — sphere chains like beaded strings
 const hairMat = toonMat(0x8B6914);
 const HAIR_SPACING = 0.1;
 const BEAD_R = 0.06;
 
-// Push bead outside head/body (playerGroup local space)
 function clampHair(p: THREE.Vector3, side: number): void {
   const HEAD_Y = 0.7, HEAD_R = 0.28 + BEAD_R;
   const BODY_R = 0.35 + BEAD_R, BODY_CAP = 0.6;
-
-  // Head
   const hdx = p.x, hdy = p.y - HEAD_Y, hdz = p.z;
   const hd = Math.sqrt(hdx * hdx + hdy * hdy + hdz * hdz);
   if (hd < HEAD_R) { const s = HEAD_R / Math.max(hd, 0.0001); p.x = hdx * s; p.y = HEAD_Y + hdy * s; p.z = hdz * s; }
-
-  // Body cylinder
   const cxz = Math.sqrt(p.x * p.x + p.z * p.z);
   if (Math.abs(p.y) <= BODY_CAP && cxz < BODY_R) { const s = BODY_R / Math.max(cxz, 0.0001); p.x *= s; p.z *= s; }
-
-  // Body caps
   for (const cy of [BODY_CAP, -BODY_CAP]) {
     const cdx = p.x, cdy = p.y - cy, cdz = p.z;
     const cd = Math.sqrt(cdx * cdx + cdy * cdy + cdz * cdz);
     if (cd < BODY_R) { const s = BODY_R / Math.max(cd, 0.0001); p.x = cdx * s; p.y = cy + cdy * s; p.z = cdz * s; }
   }
-
-  // Bias outward from head
   if (side * p.x < 0.1) p.x = side * 0.1;
 }
 
@@ -264,7 +288,6 @@ for (const side of [-1, 1]) {
   tie.position.set(side * 0.32, 0.6, -0.08);
   tie.castShadow = true;
   playerGroup.add(tie);
-
   const beads: THREE.Mesh[] = [];
   for (let b = 0; b < 10; b++) {
     const mesh = new THREE.Mesh(new THREE.SphereGeometry(BEAD_R, 5, 4), hairMat);
