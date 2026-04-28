@@ -13,7 +13,7 @@ export function createInitialState(): GameState {
     worldOffset: 0,
     score: 0,
     playerY: 5,
-    playerVelocityY: 0,
+    playerVelocityY: JUMP_VELOCITY,
     playerRotation: 0,
     gameoverTimer: 0,
   };
@@ -85,7 +85,7 @@ function startGame(): GameState {
     worldOffset: 0,
     score: 0,
     playerY: 5,
-    playerVelocityY: 0,
+    playerVelocityY: JUMP_VELOCITY,
     playerRotation: 0,
     gameoverTimer: 0,
   };

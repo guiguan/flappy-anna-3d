@@ -29,13 +29,15 @@ export class BoatSpawner {
     this.scene = scene;
   }
 
-  private waveHeight(x: number, z: number, t: number): number {
+  private waveHeight(worldX: number, worldZ: number, t: number, worldOffset: number): number {
+    // Convert to water-plane-local coordinates matching vertex shader
+    const x = worldX - worldOffset;
+    const z = worldZ + 25;
     const wave = Math.sin(x * 0.4 + t * 0.8) * 0.35
       + Math.sin(x * 0.25 + z * 0.2 + t * 1.2) * 0.25
       + Math.cos(x * 0.12 + t * 0.55) * 0.2
       + Math.sin(x * 0.06 + t * 0.3) * 0.5;
-    // Match vertex shader zFade
-    const zFade = smoothstep(-45, -25, z);
+    const zFade = smoothstep(-45, -25, worldZ);
     return wave * zFade;
   }
 
@@ -71,7 +73,7 @@ export class BoatSpawner {
       }
 
       obj.mesh.position.x = obj.nativeX;
-      obj.mesh.position.y = WATER_Y + this.waveHeight(obj.nativeX, obj.z, time * 0.001);
+      obj.mesh.position.y = WATER_Y + this.waveHeight(obj.nativeX, obj.z, time * 0.001, worldOffset);
       obj.mesh.position.z = obj.z;
     }
 

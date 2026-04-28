@@ -36,8 +36,7 @@ export class CollisionSystem {
 
     for (const obs of obstacles) {
       if (!obs.visible) continue;
-      // Check each child mesh individually — using setFromObject on the
-      // whole group would create a union AABB that spans the gap.
+      obs.updateWorldMatrix(true, true);
       for (const child of obs.children) {
         if (!(child instanceof THREE.Mesh)) continue;
         const childBox = new THREE.Box3().setFromObject(child);

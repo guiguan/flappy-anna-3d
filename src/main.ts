@@ -313,7 +313,7 @@ scene.add(playerGroup);
 // ─── Systems ─────────────────────────────────────────────────────
 const obstacleSpawner = new ObstacleSpawner(scene);
 const collisionSystem = new CollisionSystem();
-const particleSystem = new ParticleSystem(scene, 80);
+const particleSystem = new ParticleSystem(scene, 120);
 const audio = new AudioManager();
 const envSpawner = new EnvironmentSpawner(scene, toonMat);
 const animalSpawner = new AnimalSpawner(scene);
@@ -402,8 +402,8 @@ function animate(time: number) {
     if (state.score > prevState.score) {
       audio.playScore();
       particleSystem.emitBurst(
-        new THREE.Vector3(state.worldOffset + 10, state.playerY, 0),
-        12, 0xffd700, 0.8, 2.5, 0.06,
+        new THREE.Vector3(state.worldOffset, state.playerY, 0),
+        20, 0x44ff44, 0.8, 0.3, 0.50,
       );
     }
   }
@@ -411,7 +411,7 @@ function animate(time: number) {
     audio.playHit();
     particleSystem.emitBurst(
       new THREE.Vector3(state.worldOffset, state.playerY, 0),
-      20, 0xff4444, 1.2, 3.0, 0.08,
+      20, 0xff44aa, 0.8, 0.3, 0.50,
     );
   }
   // Cloud parallax (very slow, sky layer)
@@ -456,9 +456,9 @@ function animate(time: number) {
   fireflyTimer += dt;
   if (fireflyTimer > 0.5) {
     fireflyTimer = 0;
-    const fx = state.worldOffset + Math.random() * 30 - 5;
-    const fy = 1 + Math.random() * 8;
-    const fz = -2 + Math.random() * 3;
+    const fx = state.worldOffset + Math.random() * 40 - 10;
+    const fy = 1 + Math.random() * 7;
+    const fz = -10 + Math.random() * 20;
     particleSystem.emitFirefly(new THREE.Vector3(fx, fy, fz));
   }
 

@@ -21,13 +21,12 @@ export class AudioManager {
     }
   }
 
-  play(name: string, volume = 0.7, pitchVariation = 0.05) {
+  async play(name: string, volume = 0.7, pitchVariation = 0.05) {
     const buffer = this.buffers.get(name);
     if (!buffer || !this.context) return;
 
-    // Resume context if suspended (browser autoplay policy)
     if (this.context.state === 'suspended') {
-      this.context.resume();
+      await this.context.resume();
     }
 
     const source = this.context.createBufferSource();
@@ -44,9 +43,9 @@ export class AudioManager {
   }
 
   // Generate a simple tone for when no audio files are available
-  playTone(frequency: number, duration: number, volume = 0.3, type: OscillatorType = 'sine') {
+  async playTone(frequency: number, duration: number, volume = 0.3, type: OscillatorType = 'sine') {
     if (!this.context) return;
-    if (this.context.state === 'suspended') this.context.resume();
+    if (this.context.state === 'suspended') await this.context.resume();
 
     const osc = this.context.createOscillator();
     const gain = this.context.createGain();

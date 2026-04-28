@@ -8,7 +8,7 @@ export class ObstacleSpawner {
   private active: THREE.Group[] = [];
   private spawnCounter = 0;
 
-  constructor(scene: THREE.Scene, poolSize = 14) {
+  constructor(scene: THREE.Scene, poolSize = 22) {
     for (let i = 0; i < poolSize; i++) {
       const pillar = this.buildPillar();
       pillar.visible = false;
@@ -82,7 +82,7 @@ export class ObstacleSpawner {
 
   update(worldOffset: number, obstacleStartX: number, obstacleInterval: number): THREE.Group[] {
     // Spawn new obstacles ahead of camera
-    while (this.spawnCounter < 100) {
+    while (true) {
       const spawnX = obstacleStartX + this.spawnCounter * obstacleInterval;
       if (spawnX - worldOffset > 80) break; // Spawn deep in fog to avoid pop-in
 
